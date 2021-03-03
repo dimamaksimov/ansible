@@ -1,0 +1,110 @@
+- name: Add the user 'prometheus'
+  user:
+    name: prometheus
+    shell: /bin/false
+    createhome: no
+
+- name: Copy bin file to remote server
+  copy:
+    src: node_exporter 
+    dest: /usr/local/bin/
+    mode: '0755'
+
+- name: Copy file to remote server
+  copy:
+    src: monraid.sh 
+    dest: /usr/sbin/
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Copy raid_check.sh file to remote server
+  copy:
+    src: raid_check.sh 
+    dest: /usr/sbin/
+    mode: '0755'
+
+- name: Copy csync2_check.sh file to remote server
+  copy:
+    src: csync2_check.sh
+    dest: /usr/sbin/
+    mode: '0755'
+
+- name: Creates a cron raid status update
+  cron:
+    name: raid status update
+    minute: "0"
+    hour: "11"
+    user: root
+    job: "/usr/sbin/raid_check.sh"
+    cron_file: ansible_raid_status
+
+- name: Creates a cron csync2 status update
+  cron:
+    name: csync2 status update
+    minute: "*"
+    user: root
+    job: "/usr/sbin/csync2_check.sh"
+    cron_file: ansible_csync2_status
+
+
+- name: Creates directory /var/lib/node_exporter
+  file:
+    path: /var/lib/node_exporter
+    state: directory
+    owner: prometheus
+    group: prometheus
+
+- name: Creates directory /var/lib/node_exporter/textfile_collector
+  file:
+    path: /var/lib/node_exporter/textfile_collector 
+    state: directory
+    owner: prometheus
+    group: prometheus
+
+- name: Creates directory /etc/prometheus
+  file:
+    path: /etc/prometheus
+    state: directory
+    owner: prometheus
+    group: prometheus
+    #    when: ansible_lsb.major_release|int >= 8
+
+- name: Creates directory /etc/prometheus/node_exporter
+  file:
+    path: /etc/prometheus/node_exporter
+    state: directory
+    owner: prometheus
+    group: prometheus
+    #    when: ansible_lsb.major_release|int >= 8
+
+- name: Copy file to remote server
+  copy:
+    src: config
+    dest: /etc/prometheus/node_exporter/
+    mode: '0655'
+    owner: prometheus
+    group: prometheus
+    #    when: ansible_lsb.major_release|int >= 8
+
+- name: Copy file to remote server
+  copy:
+    src: node_exporter.service
+    dest: /etc/systemd/system/
+    #  when: ansible_lsb.major_release|int >= 8
+
+    #- name: Copy file to remote server old debian
+    #  copy:
+    #    src: init.d/node_exporter 
+    #    dest: /etc/init.d/
+    #    mode: '0755'
+    #  when: ansible_lsb.major_release|int <= 7
+
+    #- name: restart old debian
+    #  shell: "/etc/init.d/node_exporter stop && update-rc.d node_exporter defaults 90 && /etc/init.d/node_exporter start"
+    #  when: ansible_lsb.major_release|int <= 7
+
+- name: restart new debian 
+  shell: "systemctl daemon-reload && systemctl enable node_exporter && systemctl restart node_exporter"
+  #  when: ansible_lsb.major_release|int >= 8 
+
